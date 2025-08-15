@@ -10,7 +10,6 @@ const HomePage = () => {
     //const [roomId, setRoomId] = useState("");
     const navigate = useNavigate();
 
-
     useEffect(() => {
         if (authUser) {
             connectSocket();
@@ -22,21 +21,25 @@ const HomePage = () => {
         console.log(socket);
         
        if(socket){
-            console.log("handling offer");
-            socket.on('offer', (offer) => {
-                 console.log("offer- recieved", offer);
+            console.log("-Call");
+            socket.on('Incoming-call', (message) => {
+            console.log("Incoming-call", message);
             setIncomingCall(true);
-            navigate(`/new-room/${offer.senderUserId}`)
-            handleOffer(offer);
+            navigate(`/new-room/${message.senderUserId}`)
+            //socket.emit('resending-offer', offer)
         });
-
        }
+
     }, [socket])
 
-    const call = (userId) => {
+    const call = (targetUser) => {
         //console.log(userId);
-        
-        navigate(`/new-room/${userId}`);
+        socket.emit("calling", {type: "calling",
+            targetId: targetUser,
+            senderUserId: authUser
+        })
+
+        navigate(`/new-room/${targetUser}`);
     }
 
     return (

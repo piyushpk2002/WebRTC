@@ -12,15 +12,25 @@ export const useWebRTCStore = create((set, get) => ({
         ],
         iceCandidatePoolSize: 10,
     },
+    dc: null,
+    messages: [],
+    localStream : null,
+    remoteStream: null,
+
+    setLocalStream: (stream) => {set({localStream: stream})},
+
+    setRemoteStream: (stream) => {set({remoteStream: stream})},
 
     makeCall: async (targetUserId) => {
         try {
             const {onlineUsersMap, socket, authUser} = useAuthStore.getState();
-            const {configuration} = get();
+            const {configuration, messages} = get();
             console.log(socket);
             
             const targetSocketId = onlineUsersMap[targetUserId];
             set({target: targetSocketId});
+
+            
             
             const pc = new RTCPeerConnection(configuration);
             set({pc: pc});
@@ -52,9 +62,30 @@ export const useWebRTCStore = create((set, get) => ({
     
              
             const dc = pc.createDataChannel("channel");
-            dc.onmessage = e => console.log("just got a message" + e.data);
+            set({dc: dc})
+            dc.onmessage = e => {
+                    console.log("Message from user 2" + e.data)
+                   set({messages: [...messages, {
+                    sender: targetUserId,
+                    msg: e.data
+                   }]})
+                },
             dc.onopen = e => console.log("connection open");
             
+
+            const {localStream, remoteStream} = get();
+            console.log(localStream);
+
+            if(!localStream){
+                console.log("No local stream");
+                return;
+                
+            }
+            
+            pc.ontrack = (e) => set({remoteStream: e.streams[0]})
+
+            if(localStream)localStream.getTracks().forEach((track) => pc.addTrack(track, localStream))
+           
             //create offer
             const offer = await pc.createOffer();
         
@@ -79,7 +110,7 @@ export const useWebRTCStore = create((set, get) => ({
 
         try {
             const {onlineUsersMap, socket, authUser} = useAuthStore.getState();
-            const {configuration} = get();
+            const {configuration, messages, localStream} = get();
             const targetUserId = offer.senderUserId;
             const targetSocketId = onlineUsersMap[targetUserId];
             set({target: targetSocketId});
@@ -115,9 +146,25 @@ export const useWebRTCStore = create((set, get) => ({
 
             pc.ondatachannel = e => {
                 pc.dc = e.channel,
-                pc.dc.onmessage = e => console.log("Message from user 1" + e.data),
+                set({dc: pc.dc})
+                pc.dc.onmessage = e => {
+                    console.log("Message from user 1" + e.data)
+                    set({messages: [...messages, {
+                    sender: targetUserId,
+                    msg: e.data
+                   }]})
+                    console.log("messageArrary", messages);
+                    
+                },
                 pc.dc.onopen = e => console.log("opened");
             }
+
+            if(!localStream){
+                console.log("No local stream");
+                return;  
+            }
+            pc.ontrack = (e) => set({remoteStream: e.streams[0]})
+            if(localStream) localStream.getTracks().forEach((track) => pc.addTrack(track, localStream))
 
             await pc.setRemoteDescription(offer.offer);
             console.log("offer-settled");
@@ -187,8 +234,14 @@ export const useWebRTCStore = create((set, get) => ({
         const {pc} = get();
         if(pc){
             pc.close();
-            pc = null;
+           set({pc: null})
         }
+    },
+    
+    sendMessage: (message) =>{
+        console.log(message);
+        const {dc} = get();
+        dc.send(message)
     }
 
 }))

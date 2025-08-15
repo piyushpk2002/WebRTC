@@ -49,6 +49,19 @@ io.on("connection", (socket)=>{
         console.log('answer-running', answer);
         io.to(answer.targetId).emit('answer', answer);
     })
+
+    //when user accepts call
+    socket.on('call-accepted', (messgae) => {
+        const target = connectedUserMap[messgae.targetId]
+        console.log("call-accepted");
+        
+        io.to(target).emit('call-accepted')
+    })
+
+    socket.on('calling', (messgae) => {
+        const target = connectedUserMap[messgae.targetId]
+        io.to(target).emit('Incoming-call', messgae)
+    })
     
     socket.on("disconnect", () =>{
         console.log(`A user with ${socket.id} disconnected`);  

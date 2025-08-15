@@ -8,8 +8,8 @@ export const useAuthStore = create((set, get) =>({
     onlineUsersMap: {},
     incomingCall: false,
 
-    setIncomingCall: () =>{
-        set({incomingCall: true});
+    setIncomingCall: (value) =>{
+        set({incomingCall: value});
     },
 
     setNewRoomId: (roomId) =>{
